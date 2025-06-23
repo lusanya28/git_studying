@@ -9,6 +9,15 @@
 #include <cctype>
 #include <algorithm>
 
+void Usage() {
+    std::cout << "Usage: \n" << "program_name " <<
+                "filter filename.\n" <<
+                "Possible filters:\n" <<
+                "    even - even numbers\n" <<
+                "    odd  - odd numbers\n" <<
+                "    gt<n> - numbers greater then n\n";
+}
+
 struct INumFilter {
     virtual ~INumFilter() = default;
     virtual bool filter(const int num_to_filter) = 0;
@@ -119,9 +128,8 @@ struct INumReader {
 
         std::ifstream ifs(file_to_read);
         if(!ifs.is_open()) {
-            std::cerr << "ERROR! Couldn't open file " << file_to_read << " for reading." <<
-            "\nPlease check file name or if file exist" << "\n";
-            return data_vector;
+            Usage();
+            throw std::runtime_error("Failed to open file: " + file_to_read);
         }
         int data;
         while(ifs >> data) {
@@ -206,15 +214,6 @@ private:
     }
 };
 
-void Usage() {
-    std::cout << "Usage: \n" << "program_name " <<
-                "filter filename.\n" <<
-                "Possible filters:\n" <<
-                "    even - even numbers\n" <<
-                "    odd  - odd numbers\n" <<
-                "    gt<n> - numbers greater then n\n";
-}
-
 int main(int argc, char* argv[]) {
     if(argc != 3) {
         Usage();
@@ -250,7 +249,13 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<INumFilter> filter_ptr;
     
     if (filter_name.substr(0, 2) == "GT") {
-        int threshold = std::stoi(filter_name.substr(2));
+        int threshold = 0;
+        try {
+            threshold = std::stoi(filter_name.substr(2));            
+        } catch (const std::exception& e) {
+            Usage();
+            throw std::runtime_error("Error parsing GT filter: " + std::string(e.what()));
+        }
         filter_name = "GT";
         filter_registry.register_factory(filter_name, [threshold]() {
             return std::make_unique<GreatThanNumFilter>(threshold); 
